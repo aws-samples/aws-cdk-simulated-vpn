@@ -2,11 +2,12 @@ import * as cdk from 'aws-cdk-lib';
 import * as cr from 'aws-cdk-lib/custom-resources';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { Construct } from 'constructs';
 import { NagSuppressions } from 'cdk-nag';
 
 export interface GatewayConfigProps {
-    vpnId: string;
+    vpn: ec2.CfnVPNConnection;
 }
 
 export enum GatewayTunnelPrefix {
@@ -26,20 +27,19 @@ export class VPNConfig extends Construct {
     constructor(scope: Construct, id: string, props: GatewayConfigProps) {
         super(scope, id);
 
-        // Create a policy to describe VPN
-        const describeVpnPolicy = new iam.Policy(this, 'ec2-describeVpn', {
-            statements: [
-                new iam.PolicyStatement({
-                    effect: iam.Effect.ALLOW,
-                    actions: ['ec2:DescribeVpnConnections'],
-                    resources: [props.vpnId],
-                }),
-            ],
-        });
-
         const role = new iam.Role(this, 'describeVPNRole', {
             assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
-          });
+        });
+
+        role.addToPolicy(new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            resources: ['*'],
+            actions: ['ec2:DescribeVpnConnections'],
+            }));
+        NagSuppressions.addResourceSuppressions(role, [
+            {id: 'AwsSolutions-IAM5', reason: 'This action does not support resource-level permissions. Policies granting access must specify "*" in the resource element.'},
+        ], true);
+    
 
         const fn = new lambda.SingletonFunction(this, 'GwConfigSingleton', {
             uuid: '16b62807-000c-4985-a351-c8ef120e209b',
@@ -48,9 +48,6 @@ export class VPNConfig extends Construct {
             runtime: lambda.Runtime.NODEJS_16_X,
             role: role
         });
-
-        // attach the Policy to the function role
-        role.attachInlinePolicy(describeVpnPolicy);
 
         const provider = new cr.Provider(this, 'GwConfigProvider', {
             onEventHandler: fn,
@@ -69,7 +66,7 @@ export class VPNConfig extends Construct {
         this.customResource = new cdk.CustomResource(this, 'GwConfigResource', {
             serviceToken: provider.serviceToken,
             properties: {
-                vpnId: props.vpnId,
+                vpnId: props.vpn.ref,
                 outputPaths: paths,
             },
         });
