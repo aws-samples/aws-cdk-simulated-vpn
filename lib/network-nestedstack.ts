@@ -1,6 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import * as logs from "aws-cdk-lib/aws-logs";
+import * as logs from 'aws-cdk-lib/aws-logs';
+import * as iam from 'aws-cdk-lib/aws-iam'
 import { LogGroup } from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 
@@ -8,7 +9,6 @@ export interface StandardVpcProps {
     cidr: string,
     maxAzs: number,
     computeSubnetType: ec2.SubnetType, 
-    logGroup: logs.LogGroup
 }
 
 export class StandardVpc extends Construct {
@@ -31,12 +31,6 @@ export class StandardVpc extends Construct {
                 subnetType: ec2.SubnetType.PUBLIC,
                 cidrMask: 24,          
             }],
-            flowLogs: {
-                'cwLogs': {
-                    destination: ec2.FlowLogDestination.toCloudWatchLogs(props.logGroup),
-                    trafficType: ec2.FlowLogTrafficType.ALL
-                }
-            }
         });
 
         if (props.computeSubnetType === ec2.SubnetType.PRIVATE_ISOLATED) {
@@ -95,27 +89,36 @@ export class NetworkNestedStack extends cdk.NestedStack {
         const onPremConf = conf.onPremises;
         const cloudConf = conf.cloud;
 
-        const cwLogs = new logs.LogGroup(this, 'Log', {
-            logGroupName: '/aws/vpc/flowlogs',
-        });   
+        const logGroup = new logs.LogGroup(this, `/aws/${org}-${envPurpose}/vpc/flowlogs`);
 
+        const role = new iam.Role(this, `${org}-${envPurpose}-flowlog`, {
+          assumedBy: new iam.ServicePrincipal('vpc-flow-logs.amazonaws.com')
+        });
+        
         // 1. Setting up network
         this.onPremVPC = new StandardVpc(this,
             `${org}-${envPurpose}-${onPremConf.name}`, {
             cidr: onPremConf.cidr,
             maxAzs: onPremConf.maxAzs,
             computeSubnetType: onPremSubnetType,
-            logGroup: cwLogs
         }).vpc;
         this.onPremSubnets = {subnetType: onPremSubnetType};
-
+        new ec2.FlowLog(this, 'OnPrem-FlowLog', {
+            resourceType: ec2.FlowLogResourceType.fromVpc(this.onPremVPC),
+            destination: ec2.FlowLogDestination.toCloudWatchLogs(logGroup, role)
+          });
+  
         this.cloudVPC = new StandardVpc(this,
             `${org}-${envPurpose}-${cloudConf.name}`, {
             cidr: cloudConf.cidr,
             maxAzs: cloudConf.maxAzs,
             computeSubnetType: cloudSubnetType,
-            logGroup: cwLogs
         }).vpc;
         this.cloudSubnets = {subnetType: cloudSubnetType};
+        new ec2.FlowLog(this, 'Cloud-FlowLog', {
+            resourceType: ec2.FlowLogResourceType.fromVpc(this.cloudVPC),
+            destination: ec2.FlowLogDestination.toCloudWatchLogs(logGroup, role)
+          });
+
     }
 }
