@@ -39,6 +39,7 @@ export class GatewayStrongswan extends Construct {
 
         // Retreive gateway primary ENI
         const awsService = new cr.AwsCustomResource(this, 'GetPrimaryENI', {
+            installLatestAwsSdk: true, 
             onUpdate: {
                 service: 'EC2',
                 action: 'describeNetworkInterfaces',
