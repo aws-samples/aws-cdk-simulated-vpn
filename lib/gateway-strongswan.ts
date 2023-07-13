@@ -56,11 +56,13 @@ export class GatewayStrongswan extends Construct {
             policy: cr.AwsCustomResourcePolicy.fromStatements([
                 new iam.PolicyStatement({ // Restrict to listing and describing tables
                     actions: ['EC2:DescribeNetworkInterfaces'],
-                    resources: [this.gatewayInstance.ref],
+                    resources: ['*'],
                 })
             ]),
         });
-
+        NagSuppressions.addResourceSuppressions(awsService, [
+            {id: 'AwsSolutions-IAM5', reason: 'This action does not support resource-level permissions. Policies granting access must specify "*" in the resource element.'},
+        ], true);
         this.gatewayPrimaryEniId = awsService.getResponseField('NetworkInterfaces.0.NetworkInterfaceId');
 
         new cdk.CfnOutput(this, 'GatewayPrimaryEni', {

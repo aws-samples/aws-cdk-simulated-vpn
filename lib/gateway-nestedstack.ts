@@ -18,9 +18,9 @@ export class GatewayNestedStack extends cdk.NestedStack {
         const conf = this.node.tryGetContext('configuration');
         const onPremConf = conf.onPremises;
 
-        // Retreive vpn configuration for gateway cloudformation template
+        // Retrieve vpn configuration for gateway cloudformation template
         const gwConf = new gwc.VPNConfig(this, 'gwConfig', {
-            vpnId: vpn.ref,
+            vpn: vpn,
         });
 
         const tunnel1PSK = new secretsmanager.Secret(this, 'tunnel1PSK', {
