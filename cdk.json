@@ -45,13 +45,13 @@
       },
       "onPremises": {
         "name": "on-prem",
-        "cidr": "10.0.0.0/16",
+        "cidr": "172.32.0.0/20",
         "maxAzs": 1,
         "ASN": 65011
       },
       "cloud": {
         "name": "cloud",
-        "cidr": "10.10.0.0/16",
+        "cidr": "10.100.0.0/20",
         "maxAzs": 3
       }
     }

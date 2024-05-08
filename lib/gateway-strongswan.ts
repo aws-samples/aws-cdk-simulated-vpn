@@ -27,6 +27,7 @@ export class GatewayStrongswan extends Construct {
             {id: 'AwsSolutions-EC28', reason: 'Instance to simulate customer gateway using strongSwan, no detail monitoring is needed, Not to be used in production'},
             {id: 'AwsSolutions-EC29', reason: 'Instance to simulate customer gateway using strongSwan, storage is not being used, Not to be used in production'},
             {id: 'AwsSolutions-IAM5', reason: 'Policies specify the resource but wildcards are being used for subresources within'},
+            {id: 'AwsSolutions-EC26', reason: 'CloudFront template cannot encrypt EBS volumes'},
             {id: 'CdkNagValidationFailure', reason: 'This resouce use intrinsec functions and parameters to setup the stack'},
         ], true);
 
