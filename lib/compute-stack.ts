@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { Construct } from 'constructs';
+import { NagSuppressions } from 'cdk-nag';
 
 export interface SimpleInstanceProps {
     vpc: ec2.Vpc,
@@ -39,18 +40,11 @@ export class SimpleInstance extends Construct {
             machineImage: ec2.MachineImage.latestAmazonLinux2(),
             vpcSubnets: props.subnets,
             securityGroup: instSecurityGroup,
-            blockDevices: [
-                {
-                  deviceName: '/dev/sda1',
-                  mappingEnabled: true,
-                  volume: ec2.BlockDeviceVolume.ebs(10, {
-                    deleteOnTermination: true,
-                    encrypted: true,
-                    volumeType: ec2.EbsDeviceVolumeType.GP3, 
-                  })
-                }
-            ], 
         })
+
+        NagSuppressions.addResourceSuppressions(this.instance, [
+            {id: 'AwsSolutions-EC26', reason: 'Temporary EC2 for testing no need to encrypt EBS volumes'},
+        ], true);
 
         // Add the policy to access EC2 without SSH
         this.instance.role.addManagedPolicy(
